@@ -15,13 +15,12 @@ scheduler, and other modules can be added later as needed.
 ## Project Structure
 
 ```text
-.mvn/wrapper/
-mvnw
-mvnw.cmd
 src/
   main/
     java/com/youniverse/voyagetracker/
       VoyageTrackerApplication.java
+      coscoshipping/
+        CoscoShipmentSchedule.java
       shipmentlink/
         ShipmentLinkLoadedDate.java
     resources/
@@ -29,16 +28,18 @@ src/
   test/
     java/com/youniverse/voyagetracker/
       VoyageTrackerApplicationTests.java
+      coscoshipping/
+        CoscoShipmentScheduleTests.java
 ```
 
 ## Run
 
 ```bash
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
 ## Test
 
 ```bash
-./mvnw test
+mvn test
 ```
