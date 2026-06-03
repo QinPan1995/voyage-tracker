@@ -1,7 +1,9 @@
-package com.youniverse.voyagetracker.coscoshipping;
+package com.youniverse.voyagetracker.service;
 
+import com.youniverse.voyagetracker.model.cosco.SailingScheduleResult;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -12,7 +14,9 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class CoscoShipmentSchedule {
+@Service
+public class CoscoShippingService {
+
     private static final String BILL_TRACKING_URL = "https://elines.coscoshipping.com/ebtracking/public/bill/";
     private static final String CARGO_TRACKING_URL = "https://elines.coscoshipping.com/ebusiness/cargoTracking";
     private static final String TRACKING_TYPE_BILL_OF_LADING = "BILLOFLADING";
@@ -21,28 +25,9 @@ public class CoscoShipmentSchedule {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
-    public static void main(String[] args) throws Exception {
-
-        List<SailingScheduleResult> results = queryLiveSchedules("9507217460");
-        if (results.isEmpty()) {
-            System.out.println("No live sailing schedule found.");
-            return;
-        }
-
-        for (SailingScheduleResult result : results) {
-            System.out.println("Vessel/Voyage: " + join(result.vesselName, result.voyageNo));
-            System.out.println("POL: " + result.portOfLoading);
-            System.out.println("Departure estimated: " + valueOr(result.expectedDateOfDeparture, "Not found"));
-            System.out.println("Departure actual: " + valueOr(result.actualDepartureDate, "Not found"));
-            System.out.println("POD: " + result.portOfDischarge);
-            System.out.println("Arrival estimated: " + valueOr(result.estimatedDateOfArrival, "Not found"));
-            System.out.println("Arrival actual: " + valueOr(result.actualArrivalDate, "Not found"));
-        }
-    }
-
-    public static List<SailingScheduleResult> queryLiveSchedules(String billNo) throws IOException {
+    public List<SailingScheduleResult> queryLiveSchedules(String billNo) throws IOException {
         String normalizedBillNo = billNo.trim().toUpperCase(Locale.US);
-        if (normalizedBillNo.length() == 0) {
+        if (normalizedBillNo.isEmpty()) {
             throw new IOException("B/L number is required.");
         }
 
@@ -51,10 +36,10 @@ public class CoscoShipmentSchedule {
         return parseLiveSchedules(responseBody);
     }
 
-    static List<SailingScheduleResult> parseLiveSchedules(String responseBody) throws IOException {
+    List<SailingScheduleResult> parseLiveSchedules(String responseBody) throws IOException {
         String actualShipmentArray = jsonArray(responseBody, ACTUAL_SHIPMENT);
-        List<SailingScheduleResult> results = new ArrayList<SailingScheduleResult>();
-        if (actualShipmentArray == null || actualShipmentArray.length() == 0) {
+        List<SailingScheduleResult> results = new ArrayList<>();
+        if (actualShipmentArray == null || actualShipmentArray.isEmpty()) {
             return results;
         }
 
@@ -77,7 +62,7 @@ public class CoscoShipmentSchedule {
         return results;
     }
 
-    private static String get(String url, String referrer) throws IOException {
+    private String get(String url, String referrer) throws IOException {
         Connection.Response response = Jsoup.connect(url)
                 .userAgent(USER_AGENT)
                 .header("Accept", "application/json")
@@ -99,9 +84,9 @@ public class CoscoShipmentSchedule {
         return response.body();
     }
 
-    private static void validateResponse(String body) throws IOException {
+    private void validateResponse(String body) throws IOException {
         String code = stringField(body, "code");
-        if (code == null || code.length() == 0 || "200".equals(code)) {
+        if (code == null || code.isEmpty() || "200".equals(code)) {
             return;
         }
 
@@ -109,7 +94,7 @@ public class CoscoShipmentSchedule {
         throw new IOException("COSCO Shipping response code " + code + ": " + valueOr(message, ""));
     }
 
-    private static String jsonArray(String json, String fieldName) throws IOException {
+    private String jsonArray(String json, String fieldName) throws IOException {
         int keyIndex = json.indexOf("\"" + fieldName + "\"");
         if (keyIndex < 0) {
             return null;
@@ -135,8 +120,8 @@ public class CoscoShipmentSchedule {
         return json.substring(arrayStart + 1, arrayEnd);
     }
 
-    private static List<String> splitObjects(String arrayBody) throws IOException {
-        List<String> objects = new ArrayList<String>();
+    private List<String> splitObjects(String arrayBody) throws IOException {
+        List<String> objects = new ArrayList<>();
         int index = 0;
         while (index < arrayBody.length()) {
             index = skipWhitespaceAndCommas(arrayBody, index);
@@ -157,7 +142,7 @@ public class CoscoShipmentSchedule {
         return objects;
     }
 
-    private static int findMatching(String text, int start, char open, char close) {
+    private int findMatching(String text, int start, char open, char close) {
         boolean inString = false;
         boolean escaped = false;
         int depth = 0;
@@ -188,7 +173,7 @@ public class CoscoShipmentSchedule {
         return -1;
     }
 
-    private static String stringField(String json, String fieldName) {
+    private String stringField(String json, String fieldName) {
         Pattern pattern = Pattern.compile("\"" + Pattern.quote(fieldName)
                 + "\"\\s*:\\s*(null|\"((?:\\\\.|[^\"\\\\])*)\")");
         Matcher matcher = pattern.matcher(json);
@@ -198,7 +183,7 @@ public class CoscoShipmentSchedule {
         return unescapeJson(matcher.group(2));
     }
 
-    private static String unescapeJson(String value) {
+    private String unescapeJson(String value) {
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < value.length(); i++) {
             char ch = value.charAt(i);
@@ -231,14 +216,14 @@ public class CoscoShipmentSchedule {
         return result.toString();
     }
 
-    private static int skipWhitespace(String value, int index) {
+    private int skipWhitespace(String value, int index) {
         while (index < value.length() && Character.isWhitespace(value.charAt(index))) {
             index++;
         }
         return index;
     }
 
-    private static int skipWhitespaceAndCommas(String value, int index) {
+    private int skipWhitespaceAndCommas(String value, int index) {
         while (index < value.length()) {
             char ch = value.charAt(index);
             if (!Character.isWhitespace(ch) && ch != ',') {
@@ -249,83 +234,29 @@ public class CoscoShipmentSchedule {
         return index;
     }
 
-    private static boolean startsWith(String value, int index, String prefix) {
+    private boolean startsWith(String value, int index, String prefix) {
         return index >= 0 && index + prefix.length() <= value.length()
                 && value.substring(index, index + prefix.length()).equals(prefix);
     }
 
-    private static String referrer(String billNo) throws UnsupportedEncodingException {
+    private String referrer(String billNo) throws UnsupportedEncodingException {
         return CARGO_TRACKING_URL
                 + "?trackingType=" + TRACKING_TYPE_BILL_OF_LADING
                 + "&number=" + encode(billNo);
     }
 
-    private static String encode(String value) throws UnsupportedEncodingException {
+    private String encode(String value) throws UnsupportedEncodingException {
         return URLEncoder.encode(value, "UTF-8");
     }
 
-    private static String join(String first, String second) {
-        if (first == null || first.length() == 0) {
-            return valueOr(second, "");
-        }
-        if (second == null || second.length() == 0) {
-            return first;
-        }
-        return first + " / " + second;
+    private String valueOr(String value, String fallback) {
+        return value == null || value.isEmpty() ? fallback : value;
     }
 
-    private static String valueOr(String value, String fallback) {
-        return value == null || value.length() == 0 ? fallback : value;
-    }
-
-    private static String truncate(String value, int maxLength) {
+    private String truncate(String value, int maxLength) {
         if (value == null || value.length() <= maxLength) {
             return value;
         }
         return value.substring(0, maxLength) + "...";
-    }
-
-    public static class SailingScheduleResult {
-        public final String rowNumber;
-        public final String sequenceNumber;
-        public final String vesselName;
-        public final String voyageNo;
-        public final String service;
-        public final String portOfLoading;
-        public final String expectedDateOfDeparture;
-        public final String actualDepartureDate;
-        public final String portOfDischarge;
-        public final String estimatedDateOfArrival;
-        public final String actualArrivalDate;
-        public final String actualDischargeDate;
-        public final String transType;
-
-        public SailingScheduleResult(String rowNumber,
-                                     String sequenceNumber,
-                                     String vesselName,
-                                     String voyageNo,
-                                     String service,
-                                     String portOfLoading,
-                                     String expectedDateOfDeparture,
-                                     String actualDepartureDate,
-                                     String portOfDischarge,
-                                     String estimatedDateOfArrival,
-                                     String actualArrivalDate,
-                                     String actualDischargeDate,
-                                     String transType) {
-            this.rowNumber = rowNumber;
-            this.sequenceNumber = sequenceNumber;
-            this.vesselName = vesselName;
-            this.voyageNo = voyageNo;
-            this.service = service;
-            this.portOfLoading = portOfLoading;
-            this.expectedDateOfDeparture = expectedDateOfDeparture;
-            this.actualDepartureDate = actualDepartureDate;
-            this.portOfDischarge = portOfDischarge;
-            this.estimatedDateOfArrival = estimatedDateOfArrival;
-            this.actualArrivalDate = actualArrivalDate;
-            this.actualDischargeDate = actualDischargeDate;
-            this.transType = transType;
-        }
     }
 }
