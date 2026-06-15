@@ -56,7 +56,6 @@ public class CoscoShippingService {
                     stringField(shipmentJson, "portOfDischarge"),
                     stringField(shipmentJson, "estimatedDateOfArrival"),
                     stringField(shipmentJson, "actualArrivalDate"),
-                    stringField(shipmentJson, "actualDischargeDate"),
                     stringField(shipmentJson, "transType")));
         }
         return results;

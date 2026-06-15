@@ -8,12 +8,11 @@ public class SailingScheduleResult {
     private String voyageNo;
     private String service;
     private String portOfLoading;
+    private String portOfDischarge;
     private String expectedDateOfDeparture;
     private String actualDepartureDate;
-    private String portOfDischarge;
     private String estimatedDateOfArrival;
     private String actualArrivalDate;
-    private String actualDischargeDate;
     private String transType;
 
     public SailingScheduleResult() {
@@ -23,7 +22,7 @@ public class SailingScheduleResult {
                                   String voyageNo, String service, String portOfLoading,
                                   String expectedDateOfDeparture, String actualDepartureDate,
                                   String portOfDischarge, String estimatedDateOfArrival,
-                                  String actualArrivalDate, String actualDischargeDate,
+                                  String actualArrivalDate,
                                   String transType) {
         this.rowNumber = rowNumber;
         this.sequenceNumber = sequenceNumber;
@@ -36,7 +35,6 @@ public class SailingScheduleResult {
         this.portOfDischarge = portOfDischarge;
         this.estimatedDateOfArrival = estimatedDateOfArrival;
         this.actualArrivalDate = actualArrivalDate;
-        this.actualDischargeDate = actualDischargeDate;
         this.transType = transType;
     }
 
@@ -126,14 +124,6 @@ public class SailingScheduleResult {
 
     public void setActualArrivalDate(String actualArrivalDate) {
         this.actualArrivalDate = actualArrivalDate;
-    }
-
-    public String getActualDischargeDate() {
-        return actualDischargeDate;
-    }
-
-    public void setActualDischargeDate(String actualDischargeDate) {
-        this.actualDischargeDate = actualDischargeDate;
     }
 
     public String getTransType() {
