@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -29,24 +28,14 @@ public class CoscoShipmentController {
     @GetMapping("/schedule")
     public ResponseEntity<ApiResponse<List<SailingScheduleResult>>> getSchedule(
             @RequestParam("billNo") String billNo) {
-        try {
-            List<SailingScheduleResult> results = coscoShippingService.queryLiveSchedules(billNo);
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<SailingScheduleResult> results = coscoShippingService.queryLiveSchedules(billNo);
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 
     @PostMapping("/schedule")
     public ResponseEntity<ApiResponse<List<SailingScheduleResult>>> postSchedule(
             @Valid @RequestBody QueryRequest request) {
-        try {
-            List<SailingScheduleResult> results = coscoShippingService.queryLiveSchedules(request.getBillNo());
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<SailingScheduleResult> results = coscoShippingService.queryLiveSchedules(request.getBillNo());
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 }

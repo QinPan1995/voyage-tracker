@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -30,23 +29,15 @@ public class ScheduleController {
     public ResponseEntity<ApiResponse<List<VoyageSchedule>>> getSchedule(
             @RequestParam("billNo") String billNo,
             @RequestParam(value = "carrier", defaultValue = "") String carrier) {
-        return query(billNo, carrier);
+        List<VoyageSchedule> results = scheduleService.query(billNo, carrier);
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<List<VoyageSchedule>>> postSchedule(
             @Valid @RequestBody QueryRequest request,
             @RequestParam(value = "carrier", defaultValue = "") String carrier) {
-        return query(request.getBillNo(), carrier);
-    }
-
-    private ResponseEntity<ApiResponse<List<VoyageSchedule>>> query(String billNo, String carrier) {
-        try {
-            List<VoyageSchedule> results = scheduleService.query(billNo, carrier);
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<VoyageSchedule> results = scheduleService.query(request.getBillNo(), carrier);
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 }

@@ -1,12 +1,11 @@
 package com.youniverse.voyagetracker.service;
 
 import com.youniverse.voyagetracker.dto.VoyageSchedule;
+import com.youniverse.voyagetracker.exception.TrackingException;
 import com.youniverse.voyagetracker.model.cosco.SailingScheduleResult;
 import com.youniverse.voyagetracker.model.emc.ContainerMoveResult;
 import com.youniverse.voyagetracker.model.emc.MovementEvent;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +36,7 @@ public class ScheduleService {
         this.emcService = emcService;
     }
 
-    public List<VoyageSchedule> query(String billNo, String carrier) throws IOException {
+    public List<VoyageSchedule> query(String billNo, String carrier) {
         String resolvedCarrier = resolveCarrier(billNo, carrier);
 
         if ("cosco".equals(resolvedCarrier)) {
@@ -49,10 +48,10 @@ public class ScheduleService {
             return toVoyageSchedulesFromEmc(results);
         }
 
-        throw new IOException("Unsupported carrier: " + resolvedCarrier);
+        throw new TrackingException("Unsupported carrier: " + resolvedCarrier);
     }
 
-    private List<VoyageSchedule> toVoyageSchedulesFromCosco(String billNo) throws IOException {
+    private List<VoyageSchedule> toVoyageSchedulesFromCosco(String billNo) {
         SailingScheduleResult r = coscoShippingService.queryFinalSchedule(billNo);
         VoyageSchedule s = new VoyageSchedule();
         s.setCarrier("cosco");

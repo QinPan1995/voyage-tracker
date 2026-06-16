@@ -1,5 +1,6 @@
 package com.youniverse.voyagetracker.service;
 
+import com.youniverse.voyagetracker.exception.TrackingException;
 import com.youniverse.voyagetracker.model.emc.ContainerMoveResult;
 import com.youniverse.voyagetracker.model.emc.LoadedResult;
 import com.youniverse.voyagetracker.model.emc.MovementEvent;
@@ -31,42 +32,46 @@ public class EmcService {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
-    public List<ContainerMoveResult> queryContainerMoveDates(String blNo) throws IOException {
-        String normalizedBlNo = blNo.trim().toUpperCase(Locale.US);
-        Document trackingDoc = post(trackingParams(normalizedBlNo));
+    public List<ContainerMoveResult> queryContainerMoveDates(String blNo) {
+        try {
+            String normalizedBlNo = blNo.trim().toUpperCase(Locale.US);
+            Document trackingDoc = post(trackingParams(normalizedBlNo));
 
-        Map<String, String> cntrMoveForm = formInputs(trackingDoc, "frmCntrMove");
-        if (cntrMoveForm.isEmpty()) {
-            throw new IOException("Cannot find frmCntrMove in tracking page. B/L may be invalid or page structure changed.");
+            Map<String, String> cntrMoveForm = formInputs(trackingDoc, "frmCntrMove");
+            if (cntrMoveForm.isEmpty()) {
+                throw new TrackingException("Cannot find frmCntrMove in tracking page. B/L may be invalid or page structure changed.");
+            }
+
+            List<String> containerNos = containerNos(trackingDoc);
+            if (containerNos.isEmpty()) {
+                throw new TrackingException("Cannot find container link in tracking page. B/L may have no container detail.");
+            }
+
+            List<ContainerMoveResult> results = new ArrayList<>();
+            for (String containerNo : containerNos) {
+                Map<String, String> detailParams = new LinkedHashMap<>();
+                detailParams.put("bl_no", valueOr(cntrMoveForm.get("bl_no"), normalizedBlNo));
+                detailParams.put("cntr_no", containerNo);
+                detailParams.put("onboard_date", valueOr(cntrMoveForm.get("onboard_date"), ""));
+                detailParams.put("pol", valueOr(cntrMoveForm.get("pol"), ""));
+                detailParams.put("pod", valueOr(cntrMoveForm.get("pod"), ""));
+                detailParams.put("podctry", valueOr(cntrMoveForm.get("podctry"), ""));
+                detailParams.put("TYPE", "CntrMove");
+
+                Document detailDoc = post(detailParams);
+                results.add(new ContainerMoveResult(
+                        containerNo,
+                        movementEvent(detailDoc, LOADED_ON_VESSEL),
+                        movementEvent(detailDoc, DISCHARGED_FCL)));
+            }
+
+            return results;
+        } catch (IOException e) {
+            throw new TrackingException(e.getMessage(), e);
         }
-
-        List<String> containerNos = containerNos(trackingDoc);
-        if (containerNos.isEmpty()) {
-            throw new IOException("Cannot find container link in tracking page. B/L may have no container detail.");
-        }
-
-        List<ContainerMoveResult> results = new ArrayList<>();
-        for (String containerNo : containerNos) {
-            Map<String, String> detailParams = new LinkedHashMap<>();
-            detailParams.put("bl_no", valueOr(cntrMoveForm.get("bl_no"), normalizedBlNo));
-            detailParams.put("cntr_no", containerNo);
-            detailParams.put("onboard_date", valueOr(cntrMoveForm.get("onboard_date"), ""));
-            detailParams.put("pol", valueOr(cntrMoveForm.get("pol"), ""));
-            detailParams.put("pod", valueOr(cntrMoveForm.get("pod"), ""));
-            detailParams.put("podctry", valueOr(cntrMoveForm.get("podctry"), ""));
-            detailParams.put("TYPE", "CntrMove");
-
-            Document detailDoc = post(detailParams);
-            results.add(new ContainerMoveResult(
-                    containerNo,
-                    movementEvent(detailDoc, LOADED_ON_VESSEL),
-                    movementEvent(detailDoc, DISCHARGED_FCL)));
-        }
-
-        return results;
     }
 
-    public List<LoadedResult> queryLoadedOnVesselDates(String blNo) throws IOException {
+    public List<LoadedResult> queryLoadedOnVesselDates(String blNo) {
         List<LoadedResult> loadedResults = new ArrayList<>();
         for (ContainerMoveResult result : queryContainerMoveDates(blNo)) {
             if (result.getLoadedOnVessel() != null) {

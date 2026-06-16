@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -30,48 +29,28 @@ public class EmcController {
     @GetMapping("/container-moves")
     public ResponseEntity<ApiResponse<List<ContainerMoveResult>>> getContainerMoves(
             @RequestParam("blNo") String blNo) {
-        try {
-            List<ContainerMoveResult> results = emcService.queryContainerMoveDates(blNo);
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<ContainerMoveResult> results = emcService.queryContainerMoveDates(blNo);
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 
     @PostMapping("/container-moves")
     public ResponseEntity<ApiResponse<List<ContainerMoveResult>>> postContainerMoves(
             @Valid @RequestBody QueryRequest request) {
-        try {
-            List<ContainerMoveResult> results = emcService.queryContainerMoveDates(request.getBillNo());
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<ContainerMoveResult> results = emcService.queryContainerMoveDates(request.getBillNo());
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 
     @GetMapping("/loaded-on-vessel")
     public ResponseEntity<ApiResponse<List<LoadedResult>>> getLoadedOnVessel(
             @RequestParam("blNo") String blNo) {
-        try {
-            List<LoadedResult> results = emcService.queryLoadedOnVesselDates(blNo);
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<LoadedResult> results = emcService.queryLoadedOnVesselDates(blNo);
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 
     @PostMapping("/loaded-on-vessel")
     public ResponseEntity<ApiResponse<List<LoadedResult>>> postLoadedOnVessel(
             @Valid @RequestBody QueryRequest request) {
-        try {
-            List<LoadedResult> results = emcService.queryLoadedOnVesselDates(request.getBillNo());
-            return ResponseEntity.ok(ApiResponse.ok(results));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail(e.getMessage()));
-        }
+        List<LoadedResult> results = emcService.queryLoadedOnVesselDates(request.getBillNo());
+        return ResponseEntity.ok(ApiResponse.ok(results));
     }
 }

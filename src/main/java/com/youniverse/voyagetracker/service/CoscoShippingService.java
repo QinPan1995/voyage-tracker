@@ -1,5 +1,6 @@
 package com.youniverse.voyagetracker.service;
 
+import com.youniverse.voyagetracker.exception.TrackingException;
 import com.youniverse.voyagetracker.model.cosco.SailingScheduleResult;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -25,30 +26,38 @@ public class CoscoShippingService {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
-    public List<SailingScheduleResult> queryLiveSchedules(String billNo) throws IOException {
-        return parseLiveSchedules(fetchResponse(billNo));
+    public List<SailingScheduleResult> queryLiveSchedules(String billNo) {
+        try {
+            return parseLiveSchedules(fetchResponse(billNo));
+        } catch (IOException e) {
+            throw new TrackingException(e.getMessage(), e);
+        }
     }
 
-    public SailingScheduleResult queryFinalSchedule(String billNo) throws IOException {
-        String responseBody = fetchResponse(billNo);
-        List<SailingScheduleResult> allSchedules = parseLiveSchedules(responseBody);
-        if (allSchedules.isEmpty()) {
-            throw new IOException("No schedule found for bill " + billNo);
+    public SailingScheduleResult queryFinalSchedule(String billNo) {
+        try {
+            String responseBody = fetchResponse(billNo);
+            List<SailingScheduleResult> allSchedules = parseLiveSchedules(responseBody);
+            if (allSchedules.isEmpty()) {
+                throw new TrackingException("暂未查询到数据");
+            }
+            if (allSchedules.size() == 1) {
+                return allSchedules.get(0);
+            }
+
+            SailingScheduleResult departureLeg = findDepartureLeg(allSchedules, responseBody);
+            SailingScheduleResult arrivalLeg = findArrivalLeg(allSchedules, responseBody);
+
+            if (departureLeg == null) departureLeg = allSchedules.get(0);
+            if (arrivalLeg == null) arrivalLeg = allSchedules.get(allSchedules.size() - 1);
+
+            SailingScheduleResult result = departureLeg == arrivalLeg
+                    ? departureLeg
+                    : combineLegs(departureLeg, arrivalLeg);
+            return result;
+        } catch (IOException e) {
+            throw new TrackingException(e.getMessage(), e);
         }
-        if (allSchedules.size() == 1) {
-            return allSchedules.get(0);
-        }
-
-        SailingScheduleResult departureLeg = findDepartureLeg(allSchedules, responseBody);
-        SailingScheduleResult arrivalLeg = findArrivalLeg(allSchedules, responseBody);
-
-        if (departureLeg == null) departureLeg = allSchedules.get(0);
-        if (arrivalLeg == null) arrivalLeg = allSchedules.get(allSchedules.size() - 1);
-
-        SailingScheduleResult result = departureLeg == arrivalLeg
-                ? departureLeg
-                : combineLegs(departureLeg, arrivalLeg);
-        return result;
     }
 
     private SailingScheduleResult combineLegs(SailingScheduleResult departure, SailingScheduleResult arrival) {
@@ -71,7 +80,7 @@ public class CoscoShippingService {
     private String fetchResponse(String billNo) throws IOException {
         String normalizedBillNo = billNo.trim().toUpperCase(Locale.US);
         if (normalizedBillNo.isEmpty()) {
-            throw new IOException("B/L number is required.");
+            throw new IOException("暂未查询到数据");
         }
         String responseBody = get(BILL_TRACKING_URL + encode(normalizedBillNo), referrer(normalizedBillNo));
         validateResponse(responseBody);
