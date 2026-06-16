@@ -26,14 +26,86 @@ public class CoscoShippingService {
                     + "(KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
     public List<SailingScheduleResult> queryLiveSchedules(String billNo) throws IOException {
+        return parseLiveSchedules(fetchResponse(billNo));
+    }
+
+    public SailingScheduleResult queryFinalSchedule(String billNo) throws IOException {
+        String responseBody = fetchResponse(billNo);
+        List<SailingScheduleResult> allSchedules = parseLiveSchedules(responseBody);
+        if (allSchedules.isEmpty()) {
+            throw new IOException("No schedule found for bill " + billNo);
+        }
+        if (allSchedules.size() == 1) {
+            return allSchedules.get(0);
+        }
+
+        SailingScheduleResult departureLeg = findDepartureLeg(allSchedules, responseBody);
+        SailingScheduleResult arrivalLeg = findArrivalLeg(allSchedules, responseBody);
+
+        if (departureLeg == null) departureLeg = allSchedules.get(0);
+        if (arrivalLeg == null) arrivalLeg = allSchedules.get(allSchedules.size() - 1);
+
+        SailingScheduleResult result = departureLeg == arrivalLeg
+                ? departureLeg
+                : combineLegs(departureLeg, arrivalLeg);
+        return result;
+    }
+
+    private SailingScheduleResult combineLegs(SailingScheduleResult departure, SailingScheduleResult arrival) {
+        SailingScheduleResult result = new SailingScheduleResult();
+        result.setRowNumber(departure.getRowNumber());
+        result.setSequenceNumber(departure.getSequenceNumber());
+        result.setVesselName(departure.getVesselName());
+        result.setVoyageNo(departure.getVoyageNo());
+        result.setService(departure.getService());
+        result.setPortOfLoading(departure.getPortOfLoading());
+        result.setExpectedDateOfDeparture(departure.getExpectedDateOfDeparture());
+        result.setActualDepartureDate(departure.getActualDepartureDate());
+        result.setPortOfDischarge(arrival.getPortOfDischarge());
+        result.setEstimatedDateOfArrival(arrival.getEstimatedDateOfArrival());
+        result.setActualArrivalDate(arrival.getActualArrivalDate());
+        result.setTransType(arrival.getTransType());
+        return result;
+    }
+
+    private String fetchResponse(String billNo) throws IOException {
         String normalizedBillNo = billNo.trim().toUpperCase(Locale.US);
         if (normalizedBillNo.isEmpty()) {
             throw new IOException("B/L number is required.");
         }
-
         String responseBody = get(BILL_TRACKING_URL + encode(normalizedBillNo), referrer(normalizedBillNo));
         validateResponse(responseBody);
-        return parseLiveSchedules(responseBody);
+        return responseBody;
+    }
+
+    private SailingScheduleResult findDepartureLeg(List<SailingScheduleResult> schedules, String responseBody) {
+        String pol = stringField(responseBody, "pol");
+        if (pol == null || pol.isEmpty()) {
+            return null;
+        }
+        String polCity = pol.split("-")[0].trim().toLowerCase();
+        for (SailingScheduleResult leg : schedules) {
+            if (leg.getPortOfLoading() != null &&
+                    leg.getPortOfLoading().toLowerCase().contains(polCity)) {
+                return leg;
+            }
+        }
+        return null;
+    }
+
+    private SailingScheduleResult findArrivalLeg(List<SailingScheduleResult> schedules, String responseBody) {
+        String pod = stringField(responseBody, "pod");
+        if (pod == null || pod.isEmpty()) {
+            return null;
+        }
+        String podCity = pod.split("-")[0].trim().toLowerCase();
+        for (SailingScheduleResult leg : schedules) {
+            if (leg.getPortOfDischarge() != null &&
+                    leg.getPortOfDischarge().toLowerCase().contains(podCity)) {
+                return leg;
+            }
+        }
+        return null;
     }
 
     List<SailingScheduleResult> parseLiveSchedules(String responseBody) throws IOException {
