@@ -13,6 +13,7 @@ public class VoyageSchedule {
     private String eta;
     private String ata;
     private String containerNo;
+    private String bookingRef;
 
     public String getCarrier() {
         return carrier;
@@ -100,5 +101,13 @@ public class VoyageSchedule {
 
     public void setContainerNo(String containerNo) {
         this.containerNo = containerNo;
+    }
+
+    public String getBookingRef() {
+        return bookingRef;
+    }
+
+    public void setBookingRef(String bookingRef) {
+        this.bookingRef = bookingRef;
     }
 }

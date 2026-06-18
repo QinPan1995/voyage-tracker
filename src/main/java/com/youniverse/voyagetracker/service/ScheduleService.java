@@ -2,6 +2,8 @@ package com.youniverse.voyagetracker.service;
 
 import com.youniverse.voyagetracker.dto.VoyageSchedule;
 import com.youniverse.voyagetracker.exception.TrackingException;
+import com.youniverse.voyagetracker.model.cma.CmaCgmMovementEvent;
+import com.youniverse.voyagetracker.model.cma.CmaCgmTrackingResult;
 import com.youniverse.voyagetracker.model.cosco.SailingScheduleResult;
 import com.youniverse.voyagetracker.model.emc.ContainerMoveResult;
 import com.youniverse.voyagetracker.model.emc.MovementEvent;
@@ -30,10 +32,13 @@ public class ScheduleService {
 
     private final CoscoShippingService coscoShippingService;
     private final EmcService emcService;
+    private final CmaCgmService cmaCgmService;
 
-    public ScheduleService(CoscoShippingService coscoShippingService, EmcService emcService) {
+    public ScheduleService(CoscoShippingService coscoShippingService, EmcService emcService,
+                           CmaCgmService cmaCgmService) {
         this.coscoShippingService = coscoShippingService;
         this.emcService = emcService;
+        this.cmaCgmService = cmaCgmService;
     }
 
     public List<VoyageSchedule> query(String billNo, String carrier) {
@@ -46,6 +51,11 @@ public class ScheduleService {
         if ("emc".equals(resolvedCarrier)) {
             List<ContainerMoveResult> results = emcService.queryContainerMoveDates(billNo);
             return toVoyageSchedulesFromEmc(results);
+        }
+
+        if ("cma".equals(resolvedCarrier)) {
+            CmaCgmTrackingResult result = cmaCgmService.queryTracking(billNo);
+            return toVoyageSchedulesFromCmaCgm(result);
         }
 
         throw new TrackingException("Unsupported carrier: " + resolvedCarrier);
@@ -96,6 +106,49 @@ public class ScheduleService {
         return list;
     }
 
+    private List<VoyageSchedule> toVoyageSchedulesFromCmaCgm(CmaCgmTrackingResult result) {
+        List<VoyageSchedule> list = new ArrayList<>();
+        VoyageSchedule s = new VoyageSchedule();
+        s.setCarrier("cmacgm");
+        s.setContainerNo(result.getContainerNo());
+        s.setBookingRef(result.getBookingRef());
+        s.setPortOfLoading(result.getPol());
+        s.setPortOfDischarge(result.getPod());
+
+        for (CmaCgmMovementEvent m : result.getMovements()) {
+            String moveType = m.getMove();
+            String fullDate = m.getDate() + (m.getTime().isEmpty() ? "" : " " + m.getTime());
+            String formattedDate = cmaCgmService.extractDateFromDateTime(fullDate);
+
+            if ("LOADED ON BOARD".equalsIgnoreCase(moveType)) {
+                s.setVesselName(parseCmaVesselName(m.getVessel()));
+                s.setVoyageNo(parseCmaVoyageNo(m.getVessel()));
+                s.setAtd(formattedDate);
+            }else if ("DISCHARGED".equalsIgnoreCase(moveType)) {
+                s.setAta(formattedDate);
+            }
+        }
+
+        list.add(s);
+        return list;
+    }
+
+    private String parseCmaVesselName(String vesselStr) {
+        if (vesselStr == null || vesselStr.isEmpty()) return "";
+        int parenIdx = vesselStr.indexOf('(');
+        return parenIdx > 0 ? vesselStr.substring(0, parenIdx).trim() : vesselStr.trim();
+    }
+
+    private String parseCmaVoyageNo(String vesselStr) {
+        if (vesselStr == null || vesselStr.isEmpty()) return "";
+        int parenStart = vesselStr.indexOf('(');
+        int parenEnd = vesselStr.indexOf(')');
+        if (parenStart >= 0 && parenEnd > parenStart) {
+            return vesselStr.substring(parenStart + 1, parenEnd).trim();
+        }
+        return "";
+    }
+
     private String[] parseVesselVoyage(String vesselVoyage) {
         if (vesselVoyage == null || vesselVoyage.isEmpty()) {
             return new String[]{"", ""};
@@ -141,6 +194,9 @@ public class ScheduleService {
             }
             if (upper.startsWith("EGLV")) {
                 return "emc";
+            }
+            if (upper.startsWith("CMAU") || upper.startsWith("CMDU")) {
+                return "cmacgm";
             }
         }
         return "cosco";
