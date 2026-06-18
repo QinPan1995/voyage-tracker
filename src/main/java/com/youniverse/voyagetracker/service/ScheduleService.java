@@ -8,6 +8,7 @@ import com.youniverse.voyagetracker.model.cosco.SailingScheduleResult;
 import com.youniverse.voyagetracker.model.emc.ContainerMoveResult;
 import com.youniverse.voyagetracker.model.emc.MovementEvent;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,10 +25,18 @@ public class ScheduleService {
     private static final Map<String, String> MONTH_MAP = new HashMap<>();
 
     static {
-        MONTH_MAP.put("JAN", "01"); MONTH_MAP.put("FEB", "02"); MONTH_MAP.put("MAR", "03");
-        MONTH_MAP.put("APR", "04"); MONTH_MAP.put("MAY", "05"); MONTH_MAP.put("JUN", "06");
-        MONTH_MAP.put("JUL", "07"); MONTH_MAP.put("AUG", "08"); MONTH_MAP.put("SEP", "09");
-        MONTH_MAP.put("OCT", "10"); MONTH_MAP.put("NOV", "11"); MONTH_MAP.put("DEC", "12");
+        MONTH_MAP.put("JAN", "01");
+        MONTH_MAP.put("FEB", "02");
+        MONTH_MAP.put("MAR", "03");
+        MONTH_MAP.put("APR", "04");
+        MONTH_MAP.put("MAY", "05");
+        MONTH_MAP.put("JUN", "06");
+        MONTH_MAP.put("JUL", "07");
+        MONTH_MAP.put("AUG", "08");
+        MONTH_MAP.put("SEP", "09");
+        MONTH_MAP.put("OCT", "10");
+        MONTH_MAP.put("NOV", "11");
+        MONTH_MAP.put("DEC", "12");
     }
 
     private final CoscoShippingService coscoShippingService;
@@ -124,8 +133,24 @@ public class ScheduleService {
                 s.setVesselName(parseCmaVesselName(m.getVessel()));
                 s.setVoyageNo(parseCmaVoyageNo(m.getVessel()));
                 s.setAtd(formattedDate);
-            }else if ("DISCHARGED".equalsIgnoreCase(moveType)) {
+                s.setPortOfLoading(m.getLocation());
+                continue;
+            }
+            if ("VESSEL DEPARTURE".equalsIgnoreCase(moveType) && s.getAtd() == null) {
+                s.setVesselName(parseCmaVesselName(m.getVessel()));
+                s.setVoyageNo(parseCmaVoyageNo(m.getVessel()));
+                s.setAtd(formattedDate);
+                s.setPortOfLoading(m.getLocation());
+                continue;
+            }
+            if ("DISCHARGED".equalsIgnoreCase(moveType)) {
                 s.setAta(formattedDate);
+                s.setPortOfDischarge(m.getLocation());
+                continue;
+            }
+            if ("VESSEL ARRIVAL".equalsIgnoreCase(moveType) && s.getAta() == null) {
+                s.setAta(formattedDate);
+                s.setPortOfDischarge(m.getLocation());
             }
         }
 
